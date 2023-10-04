@@ -1,0 +1,23 @@
+#!/bin/bash
+wlconfig_src="/Library/Addigy/ansible/packages/Vida Watchguard Authpoint Mac App (1.0)/wlconfig.cfg"  
+
+if [ ! -d "/Library/Application Support/WatchGuard" ]; then
+    mkdir -p "/Library/Application Support/WatchGuard"
+fi
+
+     # Check if wlconfig file exists
+    if [ -e "$wlconfig_src" ]; then
+        
+        cp "$wlconfig_src" "/Library/Application Support/WatchGuard/wlconfig.cfg"
+    else
+        echo "wlconfig.cfg not found at '$wlconfig_src'."
+        exit 1
+    fi
+
+    /usr/sbin/installer -pkg "/Library/Addigy/ansible/packages/Vida Watchguard Authpoint Mac App (1.0)/AuthPoint_Logon_App-1.11.0.92.pkg" -target / && reboot 
+    
+else
+    echo "Directory not found"
+    exit 1
+fi
+
