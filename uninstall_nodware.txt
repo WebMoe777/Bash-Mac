@@ -1,14 +1,15 @@
 #!/bin/zsh
 
-# Step 1: Stop the Nodeware Agent services
+# Stop the Nodeware Agent services
 sudo /usr/local/bin/nodeware/NodewareAgent sv-stop
 
+# Removed plist
 rm /Library/LaunchDaemons/com.nodeware.macagent.plist
 
-# Step 2: Uninstall the Nodeware Agent package using pkgutil
+# Uninstall the Nodeware Agent package using pkgutil
 sudo pkgutil --forget com.nodeware.pkgmacagent
 
-# Step 3: Remove the Nodeware Agent directory
+# Remove the Nodeware Agent directory
 sudo rm -rf /usr/local/bin/nodeware
 
 
