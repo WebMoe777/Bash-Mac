@@ -1,0 +1,63 @@
+#!/bin/bash
+
+oldPassword=''        
+newPassword=''
+adminUser=""
+
+DSCL="/usr/bin/dscl"
+SU="/usr/bin/su"
+SEC="/usr/bin/security"
+
+# Sanity
+if ! id -u "$adminUser" >/dev/null 2>&1; then
+    echo "User '$adminUser' does not exist."
+    exit 1
+fi
+
+auth_with() {
+    $DSCL . -authonly "$adminUser" "$1" >/dev/null 2>&1
+}
+
+# Figure out the current account password
+if auth_with "$oldPassword"; then
+    # Account still on OLD -> change to NEW (no Secure Token needed)
+    if $DSCL . -passwd "/Users/$adminUser" "$oldPassword" "$newPassword"; then
+        echo "Password changed successfully for $adminUser."
+    else
+        echo "Failed to change password for $adminUser. Manual intervention needed."
+        exit 1
+    fi
+elif auth_with "$newPassword"; then
+    echo "Account password already set to the new value; skipping account change."
+else
+    echo "Neither OLD nor NEW password authenticates for $adminUser."
+    exit 1
+fi
+
+# Update the login keychain password
+# Export secrets so they expand inside the user's shell safely
+export OLD_KC="$oldPassword"
+export NEW_KC="$newPassword"
+
+# Use the user's $HOME for the keychain path to avoid tilde/quoting issues
+if [ -d "/Users/$adminUser/Library/Keychains" ]; then
+    # Try with OLD (keychain usually still on old password)
+    if $SU -l "$adminUser" -c '[[ -f "$HOME/Library/Keychains/login.keychain-db" ]] && '"$SEC"' unlock-keychain -p "$OLD_KC" "$HOME/Library/Keychains/login.keychain-db"' >/dev/null 2>&1; then
+        if $SU -l "$adminUser" -c '"'$SEC'" set-keychain-password -o "$OLD_KC" -p "$NEW_KC" "$HOME/Library/Keychains/login.keychain-db"'; then
+            echo "Updated keychain password."
+        else
+            echo "Attempted to update keychain password, but set failed."
+        fi
+    else
+        echo "Could not unlock keychain with OLD password; it may already match NEW or be iCloud/absent."
+        if $SU -l "$adminUser" -c '[[ -f "$HOME/Library/Keychains/login.keychain-db" ]] && '"$SEC"' unlock-keychain -p "$NEW_KC" "$HOME/Library/Keychains/login.keychain-db"' >/dev/null 2>&1; then
+            echo "Keychain already uses the new password; no change needed."
+        else
+            echo "Keychain unlock failed with both OLD and NEW; user may see a keychain prompt."
+        fi
+    fi
+else
+    echo "Keychain folder not found; skipping keychain update."
+fi
+
+exit 0
