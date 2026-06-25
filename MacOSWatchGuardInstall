@@ -1,23 +1,49 @@
-#!/bin/bash
-wlconfig_src="/Library/Addigy/ansible/packages/Vida Watchguard Authpoint Mac App (1.0)/wlconfig.cfg"  
+!/bin/bash
 
-if [ ! -d "/Library/Application Support/WatchGuard" ]; then
-    mkdir -p "/Library/Application Support/WatchGuard"
+# ==================================================
+# Author: Matt VC
+# Version: 4.4
+# ==================================================
+
+# Define paths
+ROOT_DESKTOP="/var/root/Desktop"
+wlconfig_src="PATH"
+install_pkg="PATH"
+wlconfig_dest="$ROOT_DESKTOP/wlconfig.cfg"
+pkg_dest="$ROOT_DESKTOP/Filename"
+
+# Ensure root Desktop directory exists
+if [ ! -d "$ROOT_DESKTOP" ]; then
+    echo "Root Desktop folder does not exist. Creating..."
+    mkdir "$ROOT_DESKTOP"
+    chown root:wheel "$ROOT_DESKTOP" 
 fi
 
-     # Check if wlconfig file exists
-    if [ -e "$wlconfig_src" ]; then
-        
-        cp "$wlconfig_src" "/Library/Application Support/WatchGuard/wlconfig.cfg"
-    else
-        echo "wlconfig.cfg not found at '$wlconfig_src'."
-        exit 1
-    fi
-
-    /usr/sbin/installer -pkg "/Library/Addigy/ansible/packages/Vida Watchguard Authpoint Mac App (1.0)/AuthPoint_Logon_App-1.11.0.92.pkg" -target / && reboot 
-    
+# Move wlconfig.cfg
+if [ -e "$wlconfig_src" ]; then
+    cp "$wlconfig_src" "$wlconfig_dest"
+    chown root:wheel "$wlconfig_dest"
 else
-    echo "Directory not found"
+    echo "wlconfig.cfg not found at $wlconfig_src"
     exit 1
 fi
 
+# Move pkg to root Desktop
+if [ -e "$install_pkg" ]; then
+    cp "$install_pkg" "$pkg_dest"
+    chown root:wheel "$pkg_dest"
+else
+    echo "Installer package not found at $install_pkg"
+    exit 1
+fi
+
+# Install the package
+/usr/sbin/installer -pkg "$install_pkg" -target /
+INSTALL_STATUS=$?
+
+if [ $INSTALL_STATUS -ne 0 ]; then
+    echo "Installation failed with exit code $INSTALL_STATUS"
+    exit $INSTALL_STATUS
+fi
+
+exit 0
