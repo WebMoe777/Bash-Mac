@@ -1,0 +1,32 @@
+#!/bin/bash
+
+display_name=""
+location=""
+protocol="" 
+address=""
+driver_ppd=""
+
+option_1=""
+
+name=$(echo "$display_name" | tr -dc '[:alnum:]' | tr '[:upper:]' '[:lower:]')
+
+if /usr/bin/lpstat -p "$name" >/dev/null 2>&1; then
+    echo "Removing existing printer queue: $name"
+    /usr/sbin/lpadmin -x "$name"
+    sleep 2
+fi
+
+/usr/sbin/lpadmin \
+    -p "$name" \
+    -L "$location" \
+    -D "$display_name" \
+    -v "${protocol}://${address}" \
+    -P "$driver_ppd" \
+    -E \
+    -o landscape \
+    -o printer-is-shared=false \
+    -o printer-error-policy=abort-job \
+    -o "$option_1" \
+    -o "$option_2"
+
+exit 0
